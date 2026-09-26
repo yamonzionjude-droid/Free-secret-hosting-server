@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b111c">
+<title>MineHost V2</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080d15;color:#eef4ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+header{position:sticky;top:0;z-index:10;padding:18px;background:#0d1420;border-bottom:1px solid #263247}
+.brand{font-size:23px;font-weight:850}.v{color:#61df72}.sub{font-size:12px;color:#8492a9;margin-top:3px}
+main{max-width:720px;margin:auto;padding:14px}.card{background:#101927;border:1px solid #26344b;border-radius:18px;padding:16px;margin-bottom:13px}
+h2{font-size:17px;margin:0 0 13px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:#9eabc0;margin:9px 0 5px}
+input,select{width:100%;background:#0a111d;color:#fff;border:1px solid #34445d;border-radius:11px;padding:12px;font-size:15px;outline:none}
+button{border:0;border-radius:11px;padding:11px 13px;font-weight:750;font-size:14px;cursor:pointer}
+.primary{background:#61df72;color:#061009}.secondary{background:#202c40;color:#fff}.danger{background:#54252d;color:#ffb7bf}.copy{background:#25344c;color:#fff}
+.full{width:100%;margin-top:12px}.server{padding:14px;background:#0c1421;border-radius:14px;border:1px solid #25334a;margin-top:10px}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:center}.name{font-weight:800;font-size:17px}.muted{font-size:12px;color:#8492a9}
+.badge{padding:6px 9px;border-radius:99px;font-size:11px;font-weight:800;background:#2b2024;color:#ff9fa9}.on{background:#162b1c;color:#8bf399}
+.row{display:flex;gap:8px;align-items:center;margin-top:9px}.address{flex:1;background:#080e18;border-radius:10px;padding:10px;font:12px monospace;word-break:break-all;color:#c8d4e7}
+.notice{font-size:12px;line-height:1.55;color:#9eabc0}.small{font-size:11px;color:#728198}
+.empty{text-align:center;color:#7e8ba1;padding:18px}
+@media(max-width:430px){.grid{grid-template-columns:1fr}.row{align-items:stretch}.row button{min-width:72px}}
+</style>
+</head>
+<body>
+<header><div class="brand">⛏️ MineHost <span class="v">V2</span></div><div class="sub">Mobile Minecraft server control panel</div></header>
+<main>
+<section class="card">
+<h2>⚙️ Create / configure server</h2>
+<label>Server name</label><input id="name" placeholder="BCNHS SMP" maxlength="32">
+<div class="grid">
+<div><label>Edition</label><select id="edition"><option>Java Edition</option><option>Bedrock Edition</option></select></div>
+<div><label>Version</label><select id="version"><option>1.21.x</option><option>1.20.x</option><option>1.19.x</option><option>Latest</option><option>Custom</option></select></div>
+</div>
+<div class="grid">
+<div><label>IP / hostname</label><input id="ip" placeholder="play.example.com"></div>
+<div><label>Port</label><input id="port" type="number" placeholder="25565"></div>
+</div>
+<label>Custom address shown to players (optional)</label>
+<input id="custom" placeholder="my-smp.example.com:25565">
+<button class="btn primary full" onclick="create()">➕ Create server</button>
+</section>
+
+<section class="card">
+<h2>🖥️ My servers</h2>
+<div id="list"></div>
+</section>
+
+<section class="card">
+<h2>📋 How players connect</h2>
+<div class="notice">
+<b>Java:</b> copy the server address. If a non-default port is used, copy <b>address:port</b>.<br>
+<b>Bedrock:</b> enter the address as <b>IP/hostname</b> and the port separately.
+<br><br>
+The address and port fields below are customizable <b>display/configuration values</b>. A website cannot create a real public IP, open a network port, or make a Minecraft server run by itself. The actual IP/port must come from the server machine or hosting provider.
+</div>
+</section>
+
+<section class="card">
+<h2>🚀 V2 backend status</h2>
+<div class="notice">
+V2 is fully functional as a mobile control panel: server data, addresses, ports, and status are saved in your browser and the copy buttons work. The <b>Start</b> button does not falsely claim to launch a remote Minecraft server.
+<br><br>
+To make <b>Start/Stop actually control a Minecraft server</b>, V3 needs a backend/hosting API connected to this panel.
+</div>
+</section>
+</main>
+<script>
+let servers=JSON.parse(localStorage.getItem("minehost_v2")||"[]");
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem("minehost_v2",JSON.stringify(servers));render()}
+function clean(x){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function create(){
+ let name=$("name").value.trim()||"My Minecraft Server";
+ let edition=$("edition").value, version=$("version").value;
+ let ip=$("ip").value.trim()||"YOUR-SERVER-IP";
+ let port=Number($("port").value)|| (edition==="Bedrock Edition"?19132:25565);
+ let custom=$("custom").value.trim();
+ servers.push({id:Date.now(),name,edition,version,ip,port,custom,running:false});
+ save(); $("name").value=""; $("ip").value=""; $("port").value=""; $("custom").value="";
+}
+function address(s){return s.custom||`${s.ip}:${s.port}`}
+function toggle(id){let s=servers.find(x=>x.id===id);if(s){s.running=!s.running;save()}}
+function del(id){servers=servers.filter(x=>x.id!==id);save()}
+async function copyText(t,btn){
+ try{await navigator.clipboard.writeText(t);let old=btn.textContent;btn.textContent="✓ Copied";setTimeout(()=>btn.textContent=old,900)}
+ catch(e){prompt("Copy this:",t)}
+}
+function render(){
+ let box=$("list");
+ if(!servers.length){box.innerHTML='<div class="empty">No servers yet.<br>Create one above.</div>';return}
+ box.innerHTML=servers.map(s=>{
+ let a=address(s);
+ return `<div class="server">
+ <div class="top"><div><div class="name">${clean(s.name)}</div><div class="muted">${clean(s.edition)} • ${clean(s.version)}</div></div>
+ <span class="badge ${s.running?'on':''}">${s.running?'ONLINE':'OFFLINE'}</span></div>
+ <div class="row"><div class="address">${clean(a)}</div><button class="copy" onclick="copyText(${JSON.stringify(a)},this)">Copy</button></div>
+ <div class="muted" style="margin-top:8px">IP/host: ${clean(s.ip)} &nbsp; Port: ${s.port}</div>
+ <div class="row">
+ <button class="${s.running?'danger':'primary'}" onclick="toggle(${s.id})">${s.running?'⏹ Stop':'▶ Start'}</button>
+ <button class="secondary" onclick="copyText(${JSON.stringify(s.ip)},this)">Copy IP</button>
+ <button class="secondary" onclick="copyText(${JSON.stringify(String(s.port))},this)">Copy port</button>
+ <button class="danger" onclick="del(${s.id})">Delete</button>
+ </div>
+ </div>`}).join("")
+}
+render();
+</script>
+</body>
+</html>
